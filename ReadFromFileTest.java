@@ -4,18 +4,113 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 class ReadFromFileTest {
+	// it seems to be just TV entries before these lines
 	private static int MOVIES_LINES_TO_SKIP = 2128910;
 	private static int RATINGS_LINES_TO_SKIP = 262652;
+	private static int GENRES_LINES_TO_SKIP = 155886;
+			
+			//154269;
+	
 	private static int LINES_TO_READ = 200;
 	private static LinkedList<String> movie_titles;
 	private static LinkedList<String> years;
+	
+	private static void readGenresFromFile() {
+		File file = new File(System.getProperty("user.dir") + "/genres.list");
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			System.out.println("Total file size to read (in bytes) : " + fis.available());
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+			// skipping the TV entries before the movie entries
+			for(int i = 0; i < GENRES_LINES_TO_SKIP; i++) {
+			  br.readLine();
+			}
+			
+			List<Set<String>> listOfGenreSets = new ArrayList<Set<String>>();
+			String [] yearsList = new String[LINES_TO_READ];
+			String [] titlesList = new String[LINES_TO_READ];
+			
+			String content;
+			int skippedLines = 0;
+			
+			// reading first entry
+			do {
+				content = br.readLine();
+				skippedLines++;
+				// if the first entry contains “(TV)” or “(V)” or "(VG)", read another line
+			} while ((content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)")));
+			Set <String> firstGenresSet = new HashSet<String>();
+			String [] firstTokens = content.split("\\s+");
+			String firstGenre = firstTokens[firstTokens.length-1]; // the last token is the genre
+			String firstYearIncludingVersion = content.substring((content.lastIndexOf('(') + 1), 
+					(content.lastIndexOf(')')));
+			String firstTitle = content.substring(0, content.lastIndexOf('('));
+			
+			firstGenresSet.add(firstGenre);
+			yearsList[0] = firstYearIncludingVersion;
+			titlesList[0] = firstTitle;
+			
+			System.out.println("FIRST GENRE: " + firstGenre + " FIRST YEAR INCL. VERSION: " + 
+					firstYearIncludingVersion + " FIRST TITLE: " + firstTitle);
+			
+			for (int i = 1; i <= LINES_TO_READ - skippedLines; i++) {
+				content = br.readLine();
+				// not including any entries marked “(TV)” or “(V)” or "(VG)"
+				if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
+					Set <String> genresSet = new HashSet<String>();
+					String [] tokens = content.split("\\s+");
+					String genre = tokens[tokens.length-1]; // the last token is the genre
+					String yearIncludingVersion = content.substring((content.lastIndexOf('(') + 1), 
+							(content.lastIndexOf(')')));
+					String title = content.substring(0, content.lastIndexOf('('));
+					
+					/* if the title + the year of release + any Roman numeral version number after it
+					 * all match those of the previous entry, then add the genre to the previous entry's set
+					 */
+					if((title + yearIncludingVersion).equals(firstTitle + firstYearIncludingVersion)) {
+						firstGenresSet.add(genre);
+					}
+					else {
+						System.out.println("GENRES SET: " + firstGenresSet + " YEAR INCL. VERSION: " + 
+								firstYearIncludingVersion + " TITLE: " + firstTitle);
+						
+						// save the previous entry's data
+						listOfGenreSets.add(firstGenresSet);
+						yearsList[i] = firstYearIncludingVersion;
+						titlesList[i] = firstTitle;
+						
+						// change the previous entry's data with the current entry's
+						firstGenre = genre; firstYearIncludingVersion = yearIncludingVersion; firstTitle = title;	
+						firstGenresSet = genresSet;
+						
+						firstGenresSet.add(firstGenre);
+					}
+				}
+				
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fis != null)
+					fis.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
 	
 	private static void readRatingsFromFile() {
 		File file = new File(System.getProperty("user.dir") + "/ratings.list");
@@ -39,8 +134,8 @@ class ReadFromFileTest {
 					distribution = tokens[1];
 					votes = tokens[2];
 					rating = tokens[3];
-					title = content.substring( (content.indexOf( (String) tokens[4]) ) , (content.length() - 6));
-					year = content.substring((content.length() - 5), (content.length() - 1));
+					title = content.substring( (content.indexOf( (String) tokens[4]) ) , (content.lastIndexOf('(')));
+					year = content.substring((content.lastIndexOf('(') + 1), (content.lastIndexOf(')')));
 					System.out.println("DISTRIBUTION: " + distribution + " VOTES: " + votes + " RATING: " + rating + 
 							" TITLE: " + title + " YEAR: " + year + "\n");
 				}
@@ -78,16 +173,20 @@ class ReadFromFileTest {
 			}
 			
 			String content, title, year;
-			int firstBracketIndex;
+			int lastOpenBracketIndex;
 			for (int i = 0; i < LINES_TO_READ; i++) {
 				content = br.readLine();
 				// not including any entries marked “(TV)” or “(V)” or "(VG)"
 				if(!(content.contains("(TV)") || content.contains("(V)")|| content.contains("(VG)"))) {
-					firstBracketIndex = content.indexOf('(');
-					// taking the title to be everything before the first open bracket
-					title = content.substring(0, firstBracketIndex);
-					// taking the year to be everything between the first and second brackets
-					year = content.substring(firstBracketIndex + 1, content.indexOf((')')));
+					
+					// skipping any occurrences of parentheses in the movie title
+					// assumes that all years are bookended by parentheses
+					lastOpenBracketIndex = content.lastIndexOf('(');
+					
+					// taking the title to be everything before the last open bracket
+					title = content.substring(0, lastOpenBracketIndex);
+					// taking the year to be everything between the last two brackets
+					year = content.substring(lastOpenBracketIndex + 1, content.lastIndexOf((')')));
 					System.out.print("CONTENT: " + content + " TITLE: " + title + "YEAR: " + year + "\n");
 					movie_titles.add(title);
 					years.add(year);
@@ -111,7 +210,6 @@ class ReadFromFileTest {
 		try
     	{		
 	      	String query = "insert into movies (movieTitle) values (?)";
-	      	System.out.println("connected");
 	      	 
 	      	PreparedStatement preparedStmt = conn.prepareStatement(query);
 	      	for(int i = 0; i < LINES_TO_READ; i++) {
@@ -157,12 +255,15 @@ class ReadFromFileTest {
 	
 	public static void main(String [] args) {
 		try {
+			/*
 			String myDriver = "org.gjt.mm.mysql.Driver";
 	      	String myUrl = "jdbc:mysql://localhost/ca4002";
 	      	Class.forName(myDriver);
 	      	Connection conn = DriverManager.getConnection(myUrl, "root", "Sh4k3sp34r3");
-	      	
-	      	readRatingsFromFile();
+	      	System.out.println("connected");
+	      	*/
+			readGenresFromFile();
+	      	//readRatingsFromFile();
 	      	//readMoviesFromFile();
 	      	//insertIntoDB(conn);
 	      	//queryDB(conn);
