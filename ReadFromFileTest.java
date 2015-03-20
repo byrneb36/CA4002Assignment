@@ -17,13 +17,84 @@ class ReadFromFileTest {
 	// it seems to be just TV entries before these lines
 	private static int MOVIES_LINES_TO_SKIP = 2128910;
 	private static int RATINGS_LINES_TO_SKIP = 262652;
-	private static int GENRES_LINES_TO_SKIP = 155886;
-			
-			//154269;
+	private static int GENRES_LINES_TO_SKIP = 154269;
+	private static int RELEASE_DATES_LINES_TO_SKIP = 2209820;
 	
 	private static int LINES_TO_READ = 200;
 	private static LinkedList<String> movie_titles;
 	private static LinkedList<String> years;
+	
+	private static void readReleaseDatesFromFile() {
+		File file = new File(System.getProperty("user.dir") + "/release-dates.list");
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			System.out.println("Total file size to read (in bytes) : " + fis.available());
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+			// skipping the TV entries before the movie entries
+			for(int i = 0; i < RELEASE_DATES_LINES_TO_SKIP; i++) {
+			  br.readLine();
+			}
+
+			String content, title, year, country, releaseDate, releaseType;
+			int bracketIndex;
+			String firstHalf, secondHalf; // splitting the content on the index of the final colon
+			for (int i = 0; i < LINES_TO_READ; i++) {
+				content = br.readLine();
+				// not including any entries marked “(TV)” or “(V)” or "(VG)"
+				if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
+					firstHalf = content.substring(0, content.lastIndexOf(':'));
+					secondHalf = content.substring(content.lastIndexOf(':'));
+					
+					country = firstHalf.substring(firstHalf.lastIndexOf(')') + 1).trim();
+					try {
+						year = firstHalf.substring(firstHalf.lastIndexOf('(') + 1, firstHalf.lastIndexOf(')'));
+					} 
+					catch (StringIndexOutOfBoundsException e) {
+						System.out.println("***EXCEPTION CONTENT***: " + content);
+						e.printStackTrace();
+						String [] tokens = content.split("\\s");
+						// handling the exception for the #Y entry
+						// *** may need to add handling for other entries ***
+						year = "";
+						if(tokens[0].equals("#Y")) {
+							firstHalf = content.substring(0, content.indexOf(':'));
+							secondHalf = content.substring(content.indexOf(':'));
+							country = firstHalf.substring(firstHalf.lastIndexOf(')') + 1).trim();
+							year = firstHalf.substring(firstHalf.lastIndexOf('(') + 1, firstHalf.lastIndexOf(')'));
+						}
+					}
+					title = firstHalf.substring(0, firstHalf.lastIndexOf('('));
+					
+					bracketIndex = secondHalf.indexOf('(');
+					if(bracketIndex != -1) {
+						releaseDate = secondHalf.substring(1, secondHalf.indexOf('('));
+						releaseType = secondHalf.substring(secondHalf.lastIndexOf('(') + 1, secondHalf.lastIndexOf(')'));
+					}
+					else {
+						// for some entries there is no release type after the date
+						releaseDate = secondHalf.substring(1);
+						releaseType = "[not specified]";
+					}
+					
+					System.out.println("CONTENT: " + content);
+					System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
+							" RELEASE DATE: " + releaseDate + " RELEASE TYPE: " + releaseType);
+				}
+			}
+
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fis != null)
+					fis.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
 	
 	private static void readGenresFromFile() {
 		File file = new File(System.getProperty("user.dir") + "/genres.list");
@@ -262,7 +333,8 @@ class ReadFromFileTest {
 	      	Connection conn = DriverManager.getConnection(myUrl, "root", "Sh4k3sp34r3");
 	      	System.out.println("connected");
 	      	*/
-			readGenresFromFile();
+			readReleaseDatesFromFile();
+			//readGenresFromFile();
 	      	//readRatingsFromFile();
 	      	//readMoviesFromFile();
 	      	//insertIntoDB(conn);
