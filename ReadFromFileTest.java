@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,10 +20,87 @@ class ReadFromFileTest {
 	private static int RATINGS_LINES_TO_SKIP = 262652;
 	private static int GENRES_LINES_TO_SKIP = 154269;
 	private static int RELEASE_DATES_LINES_TO_SKIP = 2209820;
+	private static int RUNNING_TIMES_LINES_TO_SKIP = 275285;
 	
 	private static int LINES_TO_READ = 200;
 	private static LinkedList<String> movie_titles;
 	private static LinkedList<String> years;
+	
+	private static void readRunningTimesFromFile() {
+		File file = new File(System.getProperty("user.dir") + "/running-times.list");
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			System.out.println("Total file size to read (in bytes) : " + fis.available());
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+			// skipping the TV entries before the movie entries
+			for(int i = 0; i < RUNNING_TIMES_LINES_TO_SKIP; i++) {
+			  br.readLine();
+			}
+			String content, title, year, country, runningTime, note;
+			String beforeRunningTime, runTimeToken;
+			for (int i = 0; i < LINES_TO_READ; i++) {
+				content = br.readLine();
+				// not including any entries marked “(TV)” or “(V)” or "(VG)"
+				if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
+					note  = "[not specified]"; country  = "[not specified]";
+					String [] tokens = content.split("\\s");
+					System.out.println("TOKENS: " + Arrays.toString(tokens));
+					
+					if(tokens[tokens.length-1].contains(")")) {
+						// the entry contains a note at the end
+						note = content.substring(content.lastIndexOf('(') + 1, content.lastIndexOf(')'));
+						// finding the running time token
+						int j = 1;
+						while(!tokens[tokens.length-j].contains("(")) {
+							j++;
+						}
+						runTimeToken = tokens[tokens.length-j-1];
+						System.out.println("RUN TIME TOKEN (a): " + runTimeToken);
+						if(runTimeToken.contains(":")) {
+							// country is also present
+							runningTime = runTimeToken.substring(runTimeToken.indexOf(':') + 1);
+							country = runTimeToken.substring(0, runTimeToken.indexOf(':'));
+						}
+						else 
+							runningTime = runTimeToken;
+					}
+					else {
+						runTimeToken = tokens[tokens.length-1];
+						System.out.println("RUN TIME TOKEN (b): " + runTimeToken);
+						if(runTimeToken.contains(":")) {
+							// country is also present
+							runningTime = runTimeToken.substring(runTimeToken.indexOf(':') + 1);
+							country = runTimeToken.substring(0, runTimeToken.indexOf(':'));
+						}
+						else 
+							runningTime = runTimeToken;
+					}
+					System.out.println("RUNNING TIME: " + runningTime);
+					beforeRunningTime = content.substring(0, content.lastIndexOf(runTimeToken));
+					System.out.println("BEFORE RUNNING TIME: " + beforeRunningTime);
+					year = beforeRunningTime.substring(beforeRunningTime.lastIndexOf('(') + 1, 
+							beforeRunningTime.lastIndexOf(')'));
+					title = beforeRunningTime.substring(0, beforeRunningTime.lastIndexOf('('));
+					
+					System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
+							" RUNNING TIME: " + runningTime + " NOTE: " + note);
+						
+					
+				}
+			}
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fis != null)
+					fis.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
 	
 	private static void readReleaseDatesFromFile() {
 		File file = new File(System.getProperty("user.dir") + "/release-dates.list");
@@ -82,8 +160,7 @@ class ReadFromFileTest {
 							" RELEASE DATE: " + releaseDate + " RELEASE TYPE: " + releaseType);
 				}
 			}
-
-
+			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -170,7 +247,7 @@ class ReadFromFileTest {
 				}
 				
 			}
-
+			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -211,8 +288,7 @@ class ReadFromFileTest {
 							" TITLE: " + title + " YEAR: " + year + "\n");
 				}
 			}
-			
-
+			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -333,7 +409,8 @@ class ReadFromFileTest {
 	      	Connection conn = DriverManager.getConnection(myUrl, "root", "Sh4k3sp34r3");
 	      	System.out.println("connected");
 	      	*/
-			readReleaseDatesFromFile();
+			readRunningTimesFromFile();
+			//readReleaseDatesFromFile();
 			//readGenresFromFile();
 	      	//readRatingsFromFile();
 	      	//readMoviesFromFile();
