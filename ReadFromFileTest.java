@@ -11,6 +11,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -288,6 +289,7 @@ class ReadFromFileTest {
 					}
 					else {
 						// not counting the line
+						System.out.println("i--");
 						i--;
 					}
 					
@@ -431,10 +433,70 @@ class ReadFromFileTest {
 	
 	private class Database {
 		private Connection conn;
-		private final int BATCH_SIZE = 50;
+		private final int BATCH_SIZE = 40;
 		
 		private Database(Connection conn) {
 			this.conn = conn;
+		}
+		
+		private void insertIntoDB(Genres g) {
+			try {
+				// inserting titles & years first, then adding the sets of genres				
+		      	String query = "insert into genres (title, year) values (?, ?)";
+		      	// multiple batches are required as otherwise it's stopping after 80 entries
+		      	System.out.println("LINES_TO_READ: " + LINES_TO_READ + " BATCH_SIZE: " + 
+		      			BATCH_SIZE + " LINES_TO_READ/BATCH_SIZE: " + LINES_TO_READ/BATCH_SIZE);
+		      	for(int j = 0; j < 	LINES_TO_READ/BATCH_SIZE; j++) {
+			      	System.out.println("TITLES (" + g.titlesList.size() + 
+			      			"): " + g.titlesList.toString());
+		      		PreparedStatement preparedStmt = conn.prepareStatement(query);
+			      	for(int i = 0; i < g.titlesList.size(); i++) {
+				        preparedStmt.setString (1, g.titlesList.remove());
+				        preparedStmt.setString (2, g.yearsList.remove());
+				      	preparedStmt.addBatch();
+			      	}
+			        preparedStmt.executeBatch();
+			        preparedStmt.close();
+		      	}
+		      	
+		      	// handling the remainder in cases where LINES_TO_READ isn't a multiple of BATCH_SIZE
+		      	int remainder = LINES_TO_READ % 50;
+		      	System.out.println("REMAINDER: " + remainder);
+		      	if(remainder != 0) {
+		      		PreparedStatement preparedStmt = conn.prepareStatement(query);
+			      	for(int i = 0; i < remainder; i++) {
+				        preparedStmt.setString (1, g.titlesList.remove());
+				        preparedStmt.setString (2, g.yearsList.remove());
+				      	preparedStmt.addBatch();
+			      	}
+			        preparedStmt.executeBatch();
+			        preparedStmt.close();
+		      	}
+
+			        System.out.println("G.LISTOFGENRESETS SIZE: " + g.listOfGenreSets.size());
+		      	Iterator<Set<String>> it = g.listOfGenreSets.iterator();
+		      	Set<String> nextSet = new HashSet<String>();
+		      	// adding genres
+		      	int rowId = 2;
+		      	String updateQuery, setText;
+		      	while(it.hasNext()) {
+		      		nextSet = it.next();
+		      		setText = nextSet.toString();
+		      		setText = setText.replaceAll("\\s+","");
+			      	updateQuery = "UPDATE genres SET genre = \'" + setText.substring(1, setText.length()-1) + 
+			      			"\' WHERE id = " + rowId;
+			      	System.out.println(updateQuery);
+			      	PreparedStatement preparedStmt = conn.prepareStatement(updateQuery);
+			      	preparedStmt.execute();
+			      	preparedStmt.close();
+			      	rowId++;
+		      	}
+				
+			}
+		    catch (Exception e)
+		    {
+		      e.printStackTrace();
+		    }
 		}
 		
 		private void insertIntoDB(Movies m) {
@@ -501,6 +563,30 @@ class ReadFromFileTest {
 			        }
 			        st.close();
 			      	conn.close();
+				}				
+				else if(dataRequested.equals("genres")) {
+			        String query2 = "SELECT * FROM genres";
+			        // create the java statement
+			        Statement st = conn.createStatement();
+			         
+			        // execute the query, and get a java resultset
+			        ResultSet rs = st.executeQuery(query2);
+			         
+			        // iterate through the java resultset
+			        System.out.println("RESULTS");
+			        String id, title, year, genres;
+			        while (rs.next())
+			        {
+			          id = rs.getString("id");
+			          title = rs.getString("title");
+			          year = rs.getString("year");
+			          genres = rs.getString("genre");
+			           
+			          // print the results
+			          System.out.format("%s, %s, %s, %s\n", id, title, year, genres);
+			        }
+			        st.close();
+			      	conn.close();
 				}
 		    }
 		    catch (Exception e)
@@ -515,8 +601,11 @@ class ReadFromFileTest {
 		//RunningTimes rt = new RunningTimes();
 		//rt.readRunningTimesFromFile();
 		
-		Movies m = new Movies();
-		m.readMoviesFromFile();
+		//Movies m = new Movies();
+		//m.readMoviesFromFile();
+		
+		Genres g = new Genres();
+		g.readGenresFromFile();
 		
 		try {
 			String myDriver = "org.gjt.mm.mysql.Driver";
@@ -527,8 +616,8 @@ class ReadFromFileTest {
 	      	System.out.println("connected");
 			Database db = new Database(conn);
 			
-			db.insertIntoDB(m);
-			db.queryDB("movies");
+			db.insertIntoDB(g);
+			db.queryDB("genres");
 	    }
 	    catch (Exception e)
 	    {
