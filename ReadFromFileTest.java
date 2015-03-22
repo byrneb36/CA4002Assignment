@@ -439,6 +439,18 @@ class ReadFromFileTest {
 			this.conn = conn;
 		}
 		
+		private void insertIntoDB(Ratings r) {
+			
+		}
+		
+		private void insertIntoDB(RunningTimes rt) {
+			
+		}
+		
+		private void insertIntoDB(ReleaseDates rd) {
+			
+		}
+		
 		private void insertIntoDB(Genres g) {
 			try {
 				// inserting titles & years first, then adding the sets of genres				
@@ -450,6 +462,7 @@ class ReadFromFileTest {
 			      	System.out.println("TITLES (" + g.titlesList.size() + 
 			      			"): " + g.titlesList.toString());
 		      		PreparedStatement preparedStmt = conn.prepareStatement(query);
+		      		//**** need to change this!: titlesList decreasing as i is increasing ****
 			      	for(int i = 0; i < g.titlesList.size(); i++) {
 				        preparedStmt.setString (1, g.titlesList.remove());
 				        preparedStmt.setString (2, g.yearsList.remove());
