@@ -167,6 +167,13 @@ class ReadFromFileTest {
 								country = firstHalf.substring(firstHalf.lastIndexOf(')') + 1).trim();
 								year = firstHalf.substring(firstHalf.lastIndexOf('(') + 1, firstHalf.lastIndexOf(')'));
 							}
+							else if(tokens[0].equals("$Money$")) {
+								firstHalf = content.substring(0, content.indexOf(':'));
+								secondHalf = content.substring(content.indexOf(':'));
+								country = firstHalf.substring(firstHalf.lastIndexOf(')') + 1).trim();
+								year = firstHalf.substring(firstHalf.lastIndexOf('(') + 1, firstHalf.lastIndexOf(')'));
+								
+							}
 						}
 						title = firstHalf.substring(0, firstHalf.lastIndexOf('('));
 						
@@ -440,15 +447,72 @@ class ReadFromFileTest {
 		}
 		
 		private void insertIntoDB(Ratings r) {
-			
+			try {
+		      	String query = "insert into ratings (distribution, votes, rating, title, "
+		      			+ "year) values (?, ?, ?, ?, ?)";
+		      	PreparedStatement preparedStmt = conn.prepareStatement(query);
+		      	int numOfTitles = r.titles.size();
+		      	for(int i = 0; i < numOfTitles; i++) {
+			        preparedStmt.setString (1, r.distributions.remove());
+			        preparedStmt.setString (2, r.votesList.remove());
+			        preparedStmt.setString (3, r.ratings.remove());
+			        preparedStmt.setString (4, r.titles.remove());
+			        preparedStmt.setString (5, r.years.remove());
+			      	preparedStmt.addBatch();
+		      	}
+		        preparedStmt.executeBatch();
+		        preparedStmt.close();
+			}
+		    catch (Exception e)
+		    {
+		      e.printStackTrace();
+		    }
 		}
 		
 		private void insertIntoDB(RunningTimes rt) {
-			
+			try {
+		      	String query = "insert into running_times (title, year, country, runningTime, "
+		      			+ "note) values (?, ?, ?, ?, ?)";
+		      	PreparedStatement preparedStmt = conn.prepareStatement(query);
+		      	int numOfTitles = rt.titles.size();
+		      	for(int i = 0; i < numOfTitles; i++) {
+			        preparedStmt.setString (1, rt.titles.remove());
+			        preparedStmt.setString (2, rt.years.remove());
+			        preparedStmt.setString (3, rt.countries.remove());
+			        preparedStmt.setString (4, rt.runningTimes.remove());
+			        preparedStmt.setString (5, rt.notes.remove());
+			      	preparedStmt.addBatch();
+		      	}
+		        preparedStmt.executeBatch();
+		        preparedStmt.close();
+			}
+		    catch (Exception e)
+		    {
+		      e.printStackTrace();
+		    }
 		}
 		
 		private void insertIntoDB(ReleaseDates rd) {
-			
+			try {
+		      	String query = "insert into release_dates (title, year, country, releaseDate, "
+		      			+ "releaseType) values (?, ?, ?, ?, ?)";
+		      	PreparedStatement preparedStmt = conn.prepareStatement(query);
+		      	int numOfTitles = rd.titles.size();
+		      	for(int i = 0; i < numOfTitles; i++) {
+			        preparedStmt.setString (1, rd.titles.remove());
+			        preparedStmt.setString (2, rd.years.remove());
+			        preparedStmt.setString (3, rd.countries.remove());
+			        preparedStmt.setString (4, rd.releaseDates.remove());
+			        preparedStmt.setString (5, rd.releaseTypes.remove());
+			      	preparedStmt.addBatch();
+		      	}
+		        preparedStmt.executeBatch();
+		        preparedStmt.close();
+			}
+		    catch (Exception e)
+		    {
+		      e.printStackTrace();
+		    }
 		}
 		
 		private void insertIntoDB(Genres g) {
@@ -517,7 +581,7 @@ class ReadFromFileTest {
 	    	{		
 				System.out.println("INSERT INTO DB M.MOVIE_TITLES: " + m.movie_titles.toString());
 				System.out.println("INSERT INTO DB M.YEARS: " + m.years.toString());
-		      	String query = "insert into movies (movieTitle, year) values (?, ?)";
+		      	String query = "insert into movies (title, year) values (?, ?)";
 		      	 
 		      	// multiple batches are required as otherwise it's stopping after 80 entries
 		      	for(int j = 0; j < 	LINES_TO_READ/BATCH_SIZE; j++) {
@@ -568,7 +632,7 @@ class ReadFromFileTest {
 			        while (rs.next())
 			        {
 			          id = rs.getString("id");
-			          movieTitle = rs.getString("movieTitle");
+			          movieTitle = rs.getString("title");
 			          year = rs.getString("year");
 			           
 			          // print the results
@@ -601,6 +665,87 @@ class ReadFromFileTest {
 			        st.close();
 			      	conn.close();
 				}
+				else if(dataRequested.equals("releaseDates")) {
+			        String query = "SELECT * FROM release_dates";
+			        // create the java statement
+			        Statement st = conn.createStatement();
+			         
+			        // execute the query, and get a java resultset
+			        ResultSet rs = st.executeQuery(query);
+			         
+			        // iterate through the java resultset
+			        System.out.println("RESULTS");
+			        String id, title, year, country, releaseDate, releaseType;
+			        while (rs.next())
+			        {
+			          id = rs.getString("id");
+			          title = rs.getString("title");
+			          year = rs.getString("year");
+			          country = rs.getString("country");
+			          releaseDate = rs.getString("releaseDate");
+			          releaseType = rs.getString("releaseType");
+			           
+			          // print the results
+			          System.out.format("%s, %s, %s, %s, %s, %s \n", id, title, year, 
+			        		  country, releaseDate, releaseType);
+			        }
+			        st.close();
+			      	conn.close();					
+				}
+				else if(dataRequested.equals("runningTimes")) {
+			        String query = "SELECT * FROM running_times";
+			        // create the java statement
+			        Statement st = conn.createStatement();
+			         
+			        // execute the query, and get a java resultset
+			        ResultSet rs = st.executeQuery(query);
+			         
+			        // iterate through the java resultset
+			        System.out.println("RESULTS");
+			        String id, title, year, country, runningTime, note;
+			        while (rs.next())
+			        {
+			          id = rs.getString("id");
+			          title = rs.getString("title");
+			          year = rs.getString("year");
+			          country = rs.getString("country");
+			          runningTime = rs.getString("runningTime");
+			          note = rs.getString("note");
+			           
+			          // print the results
+			          System.out.format("%s, %s, %s, %s, %s, %s\n", id, title, year, country, 
+			        		  runningTime, note);
+			        }
+			        st.close();
+			      	conn.close();
+				}	
+				else if(dataRequested.equals("ratings")) {
+			        String query = "SELECT * FROM ratings";
+			        // create the java statement
+			        Statement st = conn.createStatement();
+			         
+			        // execute the query, and get a java resultset
+			        ResultSet rs = st.executeQuery(query);
+			         
+			        // iterate through the java resultset
+			        System.out.println("RESULTS");
+			        String id, distribution, votes, rating, title, year;
+			        while (rs.next())
+			        {
+			          id = rs.getString("id");
+			          distribution = rs.getString("distribution");
+			          votes = rs.getString("votes");
+			          rating = rs.getString("rating");
+			          title = rs.getString("title");
+			          year = rs.getString("year");
+			           
+			          // print the results
+			          System.out.format("%s, %s, %s, %s, %s, %s\n", id, distribution, 
+			        		  votes, rating, title, year);
+			        }
+			        st.close();
+			      	conn.close();
+				}
 		    }
 		    catch (Exception e)
 		    {
@@ -617,8 +762,17 @@ class ReadFromFileTest {
 		//Movies m = new Movies();
 		//m.readMoviesFromFile();
 		
-		Genres g = new Genres();
-		g.readGenresFromFile();
+		//Genres g = new Genres();
+		//g.readGenresFromFile();
+		
+		//ReleaseDates rd = new ReleaseDates();
+		//rd.readReleaseDatesFromFile();
+		
+		//RunningTimes rt = new RunningTimes();
+		//rt.readRunningTimesFromFile();
+		
+		Ratings r = new Ratings();
+		r.readRatingsFromFile();
 		
 		try {
 			String myDriver = "org.gjt.mm.mysql.Driver";
@@ -629,8 +783,8 @@ class ReadFromFileTest {
 	      	System.out.println("connected");
 			Database db = new Database(conn);
 			
-			db.insertIntoDB(g);
-			db.queryDB("genres");
+			db.insertIntoDB(r);
+			db.queryDB("ratings");
 	    }
 	    catch (Exception e)
 	    {
