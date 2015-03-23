@@ -28,12 +28,14 @@ class ReadFromFileTest {
 	
 	private class RunningTimes {
 		private LinkedList<String> titles, years, countries, runningTimes, notes;
+		private int numOfExceptions;
 		private RunningTimes() {
 			titles = new LinkedList<String>();
 			years = new LinkedList<String>();
 			countries = new LinkedList<String>();
 			runningTimes = new LinkedList<String>();
 			notes = new LinkedList<String>();
+			numOfExceptions = 0;
 		}
 		
 		private void readRunningTimesFromFile() {
@@ -49,8 +51,10 @@ class ReadFromFileTest {
 				}
 				String content, title, year, country, runningTime, note;
 				String beforeRunningTime, runTimeToken;
-				for (int i = 0; i < LINES_TO_READ; i++) {
-					content = br.readLine();
+				while ((content = br.readLine()) != null)
+					//(int i = 0; i < LINES_TO_READ; i++) 
+					{
+					
 					// not including any entries marked “(TV)” or “(V)” or "(VG)"
 					if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
 						note  = "[not specified]"; country  = "[not specified]";
@@ -89,19 +93,26 @@ class ReadFromFileTest {
 						System.out.println("RUNNING TIME: " + runningTime);
 						beforeRunningTime = content.substring(0, content.lastIndexOf(runTimeToken));
 						System.out.println("BEFORE RUNNING TIME: " + beforeRunningTime);
-						year = beforeRunningTime.substring(beforeRunningTime.lastIndexOf('(') + 1, 
-								beforeRunningTime.lastIndexOf(')'));
-						title = beforeRunningTime.substring(0, beforeRunningTime.lastIndexOf('('));
-						
-						System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
-								" RUNNING TIME: " + runningTime + " NOTE: " + note);
-						titles.add(title); years.add(year); countries.add(country); runningTimes.add(runningTime);
-						notes.add(note);
+						try {
+							year = beforeRunningTime.substring(beforeRunningTime.lastIndexOf('(') + 1, 
+									beforeRunningTime.lastIndexOf(')'));
+							title = beforeRunningTime.substring(0, beforeRunningTime.lastIndexOf('('));
+							
+							System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
+									" RUNNING TIME: " + runningTime + " NOTE: " + note);
+							titles.add(title); years.add(year); countries.add(country); runningTimes.add(runningTime);
+							notes.add(note);
+						} catch(StringIndexOutOfBoundsException e) {
+							numOfExceptions++;
+							e.printStackTrace();
+						}
 					}
+					/*
 					else {
 						// not counting the line
 						i--;
 					}
+					*/
 				}
 				br.close();
 			} catch (IOException e) {
@@ -143,8 +154,9 @@ class ReadFromFileTest {
 				String content, title, year, country, releaseDate, releaseType;
 				int bracketIndex;
 				String firstHalf, secondHalf; // splitting the content on the index of the final colon
-				for (int i = 0; i < LINES_TO_READ; i++) {
-					content = br.readLine();
+				while ((content = br.readLine()) != null)
+					//(int i = 0; i < LINES_TO_READ; i++) 
+					{
 					// not including any entries marked “(TV)” or “(V)” or "(VG)"
 					if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
 						firstHalf = content.substring(0, content.lastIndexOf(':'));
@@ -176,31 +188,42 @@ class ReadFromFileTest {
 							}
 						}
 						title = firstHalf.substring(0, firstHalf.lastIndexOf('('));
-						
-						bracketIndex = secondHalf.indexOf('(');
-						if(bracketIndex != -1) {
-							releaseDate = secondHalf.substring(1, secondHalf.indexOf('('));
-							releaseType = secondHalf.substring(secondHalf.lastIndexOf('(') + 1, secondHalf.lastIndexOf(')'));
+
+						// this try-catch block is for line 197 (five lines down)
+						try {
+							bracketIndex = secondHalf.indexOf('(');
+							if(bracketIndex != -1) {
+								releaseDate = secondHalf.substring(1, secondHalf.indexOf('('));
+								releaseType = secondHalf.substring(secondHalf.lastIndexOf('(') + 1, secondHalf.lastIndexOf(')'));
+	
+							}
+							else {
+								// for some entries there is no release type after the date
+								releaseDate = secondHalf.substring(1);
+								releaseType = "[not specified]";
+							}
+							
+							//System.out.println("CONTENT: " + content);
+							System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
+									" RELEASE DATE: " + releaseDate + " RELEASE TYPE: " + releaseType);
+							titles.add(title); years.add(year); countries.add(country); releaseDates.add(releaseDate);
+							releaseTypes.add(releaseType);							
+						} catch (StringIndexOutOfBoundsException e) {
+							e.printStackTrace();
 						}
-						else {
-							// for some entries there is no release type after the date
-							releaseDate = secondHalf.substring(1);
-							releaseType = "[not specified]";
-						}
-						
-						System.out.println("CONTENT: " + content);
-						System.out.println("TITLE: " + title + " YEAR: " + year + " COUNTRY: " + country + 
-								" RELEASE DATE: " + releaseDate + " RELEASE TYPE: " + releaseType);
-						titles.add(title); years.add(year); countries.add(country); releaseDates.add(releaseDate);
-						releaseTypes.add(releaseType);
 					}
+					/*
 					else {
 						// not counting the line
 						i--;
 					}
+					*/
 				}
 				br.close();
-			} catch (IOException e) {
+			} catch(StringIndexOutOfBoundsException s) {
+				s.printStackTrace();
+			}
+			catch (IOException e) {
 				e.printStackTrace();
 			} finally {
 				try {
@@ -261,8 +284,9 @@ class ReadFromFileTest {
 				System.out.println("FIRST GENRE: " + firstGenre + " FIRST YEAR INCL. VERSION: " + 
 						firstYearIncludingVersion + " FIRST TITLE: " + firstTitle);
 				
-				for (int i = 1; i <= LINES_TO_READ - skippedLines; i++) {
-					content = br.readLine();
+				while ((content = br.readLine()) != null)
+					//(int i = 0; i < LINES_TO_READ; i++) 
+					{
 					// not including any entries marked “(TV)” or “(V)” or "(VG)"
 					if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
 						Set <String> genresSet = new HashSet<String>();
@@ -294,11 +318,13 @@ class ReadFromFileTest {
 							firstGenresSet.add(firstGenre);
 						}
 					}
+					/*
 					else {
 						// not counting the line
 						System.out.println("i--");
 						i--;
 					}
+					*/
 					
 				}
 				br.close();
@@ -339,11 +365,12 @@ class ReadFromFileTest {
 				}
 				
 				String content, distribution = "", votes = "", rating = "", title = "", year = "";
-				for (int i = 0; i < LINES_TO_READ; i++) {
-					content = br.readLine();
+				while ((content = br.readLine()) != null)
+					//(int i = 0; i < LINES_TO_READ; i++) 
+					{
 					// not including any entries marked “(TV)” or “(V)” or "(VG)"
 					if(!(content.contains("(TV)") || content.contains("(V)") || content.contains("(VG)"))) {
-						System.out.println("CONTENT: " + content);
+						//System.out.println("CONTENT: " + content);
 						String [] tokens = content.split("\\s+");
 						distribution = tokens[1];
 						votes = tokens[2];
@@ -355,13 +382,18 @@ class ReadFromFileTest {
 						distributions.add(distribution); votesList.add(votes); ratings.add(rating); titles.add(title);
 						years.add(year);
 					}
+					/*
 					else {
 						// not counting the line
 						i--;
 					}
+					*/
 				}
 				br.close();
-			} catch (IOException e) {
+			} catch(ArrayIndexOutOfBoundsException a) {
+				a.printStackTrace();
+			}
+			catch (IOException e) {
 				e.printStackTrace();
 			} finally {
 				try {
@@ -401,8 +433,10 @@ class ReadFromFileTest {
 				
 				String content, title, year;
 				int lastOpenBracketIndex;
-				for (int i = 0; i < LINES_TO_READ; i++) {
-					content = br.readLine();
+
+				while ((content = br.readLine()) != null)
+					//(int i = 0; i < LINES_TO_READ; i++) 
+					{
 					// not including any entries marked “(TV)” or “(V)” or "(VG)"
 					if(!(content.contains("(TV)") || content.contains("(V)")|| content.contains("(VG)"))) {
 						
@@ -418,14 +452,19 @@ class ReadFromFileTest {
 						movie_titles.add(title);
 						years.add(year);
 					}
+					/*
 					else {
 						// not counting the line
 						i--;
 					}
+					*/
 				}
 				br.close();
 				
-			} catch (IOException e) {
+			} catch(StringIndexOutOfBoundsException i) {
+				i.printStackTrace();
+			}
+			catch (IOException e) {
 				e.printStackTrace();
 			} finally {
 				try {
@@ -496,18 +535,37 @@ class ReadFromFileTest {
 			try {
 		      	String query = "insert into release_dates (title, year, country, releaseDate, "
 		      			+ "releaseType) values (?, ?, ?, ?, ?)";
-		      	PreparedStatement preparedStmt = conn.prepareStatement(query);
-		      	int numOfTitles = rd.titles.size();
-		      	for(int i = 0; i < numOfTitles; i++) {
-			        preparedStmt.setString (1, rd.titles.remove());
-			        preparedStmt.setString (2, rd.years.remove());
-			        preparedStmt.setString (3, rd.countries.remove());
-			        preparedStmt.setString (4, rd.releaseDates.remove());
-			        preparedStmt.setString (5, rd.releaseTypes.remove());
-			      	preparedStmt.addBatch();
+		      	int numOfTitles = rd.titles.size();		      	 
+		      	// multiple batches are required as otherwise it's stopping after 80 entries
+		      	for(int j = 0; j < 	numOfTitles/BATCH_SIZE; j++) {
+			      	PreparedStatement preparedStmt = conn.prepareStatement(query);
+			      	for(int i = 0; i < BATCH_SIZE; i++) {
+				        preparedStmt.setString (1, rd.titles.remove());
+				        preparedStmt.setString (2, rd.years.remove());
+				        preparedStmt.setString (3, rd.countries.remove());
+				        preparedStmt.setString (4, rd.releaseDates.remove());
+				        preparedStmt.setString (5, rd.releaseTypes.remove());
+				      	preparedStmt.addBatch();
+			      	}
+			        preparedStmt.executeBatch();
+			        preparedStmt.close();
+		      	}		      	
+		      	
+		      	// handling the remainder in cases where LINES_TO_READ isn't a multiple of BATCH_SIZE
+		      	int remainder = numOfTitles % BATCH_SIZE;
+		      	if(remainder != 0) {
+			      	PreparedStatement preparedStmt = conn.prepareStatement(query);
+			      	for(int i = 0; i < remainder; i++) {
+				        preparedStmt.setString (1, rd.titles.remove());
+				        preparedStmt.setString (2, rd.years.remove());
+				        preparedStmt.setString (3, rd.countries.remove());
+				        preparedStmt.setString (4, rd.releaseDates.remove());
+				        preparedStmt.setString (5, rd.releaseTypes.remove());
+				      	preparedStmt.addBatch();
+			      	}
+			        preparedStmt.executeBatch();
+			        preparedStmt.close();
 		      	}
-		        preparedStmt.executeBatch();
-		        preparedStmt.close();
 			}
 		    catch (Exception e)
 		    {
@@ -520,11 +578,11 @@ class ReadFromFileTest {
 				// inserting titles & years first, then adding the sets of genres				
 		      	String query = "insert into genres (title, year) values (?, ?)";
 		      	// multiple batches are required as otherwise it's stopping after 80 entries
-		      	System.out.println("LINES_TO_READ: " + LINES_TO_READ + " BATCH_SIZE: " + 
-		      			BATCH_SIZE + " LINES_TO_READ/BATCH_SIZE: " + LINES_TO_READ/BATCH_SIZE);
+		      	//System.out.println("LINES_TO_READ: " + LINES_TO_READ + " BATCH_SIZE: " + 
+		      	//		BATCH_SIZE + " LINES_TO_READ/BATCH_SIZE: " + LINES_TO_READ/BATCH_SIZE);
 		      	for(int j = 0; j < 	LINES_TO_READ/BATCH_SIZE; j++) {
-			      	System.out.println("TITLES (" + g.titlesList.size() + 
-			      			"): " + g.titlesList.toString());
+			      	//System.out.println("TITLES (" + g.titlesList.size() + 
+			      	//		"): " + g.titlesList.toString());
 		      		PreparedStatement preparedStmt = conn.prepareStatement(query);
 		      		//**** need to change this!: titlesList decreasing as i is increasing ****
 			      	for(int i = 0; i < g.titlesList.size(); i++) {
@@ -579,12 +637,12 @@ class ReadFromFileTest {
 		private void insertIntoDB(Movies m) {
 			try
 	    	{		
-				System.out.println("INSERT INTO DB M.MOVIE_TITLES: " + m.movie_titles.toString());
-				System.out.println("INSERT INTO DB M.YEARS: " + m.years.toString());
+				//System.out.println("INSERT INTO DB M.MOVIE_TITLES: " + m.movie_titles.toString());
+				//System.out.println("INSERT INTO DB M.YEARS: " + m.years.toString());
 		      	String query = "insert into movies (title, year) values (?, ?)";
-		      	 
+		      	 int size = m.movie_titles.size();
 		      	// multiple batches are required as otherwise it's stopping after 80 entries
-		      	for(int j = 0; j < 	LINES_TO_READ/BATCH_SIZE; j++) {
+		      	for(int j = 0; j < 	size/BATCH_SIZE; j++) {
 			      	PreparedStatement preparedStmt = conn.prepareStatement(query);
 			      	for(int i = 0; i < BATCH_SIZE; i++) {
 				        preparedStmt.setString (1, m.movie_titles.remove());
@@ -595,8 +653,9 @@ class ReadFromFileTest {
 			        preparedStmt.close();
 		      	}
 		      	
+		      	
 		      	// handling the remainder in cases where LINES_TO_READ isn't a multiple of BATCH_SIZE
-		      	int remainder = LINES_TO_READ % 50;
+		      	int remainder = size % 50;
 		      	if(remainder != 0) {
 			      	PreparedStatement preparedStmt = conn.prepareStatement(query);
 			      	for(int i = 0; i < remainder; i++) {
@@ -607,6 +666,7 @@ class ReadFromFileTest {
 			        preparedStmt.executeBatch();
 			        preparedStmt.close();
 		      	}
+		      	
 		      	
 		      		
 		    }
@@ -765,14 +825,14 @@ class ReadFromFileTest {
 		//Genres g = new Genres();
 		//g.readGenresFromFile();
 		
-		//ReleaseDates rd = new ReleaseDates();
-		//rd.readReleaseDatesFromFile();
+		ReleaseDates rd = new ReleaseDates();
+		rd.readReleaseDatesFromFile();
 		
 		//RunningTimes rt = new RunningTimes();
 		//rt.readRunningTimesFromFile();
 		
-		Ratings r = new Ratings();
-		r.readRatingsFromFile();
+		//Ratings r = new Ratings();
+		//r.readRatingsFromFile();
 		
 		try {
 			String myDriver = "org.gjt.mm.mysql.Driver";
@@ -783,8 +843,9 @@ class ReadFromFileTest {
 	      	System.out.println("connected");
 			Database db = new Database(conn);
 			
-			db.insertIntoDB(r);
-			db.queryDB("ratings");
+			//System.out.println("NUM OF EXCEPTIONS: " + rt.numOfExceptions);
+			db.insertIntoDB(rd);
+			db.queryDB("releaseDates");
 	    }
 	    catch (Exception e)
 	    {
