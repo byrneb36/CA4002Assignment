@@ -811,7 +811,167 @@ class ReadFromFileTest {
 		    {
 		      e.printStackTrace();
 		    }
-		}		
+		}
+		
+		// attributeTypes indicate the column of each attribute
+		// e.g. attributes: [19, Short, 2008] attributeTypes: [runningTime, genre, year]
+		/* classification is:
+		    8.0 - 10: great
+			6.5 - 8.0: good
+			5.0 - 6.5: mediocre
+			0 - 5.0: bad
+		 */
+		private void naiveBayes(String [] attributes, String [] attributeTypes) {
+			try {
+				String query = "select runningTime, genre, ratings.year," + 
+					" running_times.title, rating from genres, ratings, running_times where " + 
+					"(running_times.title = ratings.title AND " + 
+					"ratings.title = genres.title AND running_times.year " +
+					"= ratings.year AND ratings.year = genres.year);";
+		        // create the java statement
+		        Statement st = conn.createStatement();
+		         
+		        // execute the query, and get a java resultset
+		        ResultSet rs = st.executeQuery(query);
+		         
+		        // iterate through the java resultset
+		        System.out.println("RESULTS");
+		        String runningTime, year, rating, title, genre;
+		        
+		        double [] priorProbabilities = new double[4];
+		        double [] frequencies = {0, 0, 0, 0}; // frequencies of each class
+		        double [][] attributeFrequencies = new double [4][attributes.length];
+		        double frequency;
+		        double totalInstances = 0;
+		        double [] classes = {8.0, 6.5, 5.0, 0};
+		        while (rs.next())
+		        {
+				      runningTime = rs.getString("runningTime");
+			          genre = rs.getString("genre");
+			          year = rs.getString("year");
+			          title = rs.getString("title");
+			          rating = rs.getString("rating");
+			          
+			          for(int i = 0; i < attributes.length; i++) {
+				          if(attributeTypes[i].equals("runningTime")) {
+				        	  if(attributes[i].equals(runningTime)) {
+				        		  System.out.println("INSIDE IF 1");
+						          for(int a = 0; a < classes.length; a++) {
+					        		  // if the rating matches the classification
+							          if(Double.parseDouble(rating) >= classes[a]) {
+							        	  attributeFrequencies[a][i]++;
+							          }
+						          }
+				        	  }
+				          } else if(attributeTypes[i].equals("genre")) {
+				        	  if(attributes[i].equals(genre)) {
+				        		  System.out.println("INSIDE IF 2");
+						          for(int a = 0; a < classes.length; a++) {
+					        		  // if the rating matches the classification
+							          if(Double.parseDouble(rating) >= classes[a]) {
+							        	  attributeFrequencies[a][i]++;
+							          }
+						          }
+				        	  }
+				          } else if(attributeTypes[i].equals("year")) {
+				        	  if(attributes[i].equals(year)) {
+				        		  System.out.println("INSIDE IF 3");
+						          for(int a = 0; a < classes.length; a++) {
+					        		  // if the rating matches the classification
+							          if(Double.parseDouble(rating) >= classes[a]) {
+							        	  attributeFrequencies[a][i]++;
+							          }
+						          }
+				        	  }
+				          }
+			          }	
+
+		          
+			          // print the results
+			          //System.out.format("%s, %s, %s, %s, %s\n", runningTime, genre, year, title, rating);
+	
+				       // prior probability of the classes: great, good, mediocre, bad
+			          frequency = Double.parseDouble(rating);
+			          //System.out.println("Freq: " + frequency);
+			          if(frequency >= 8.0)
+			        	  frequencies[0]++;
+			          else if(frequency >= 6.5)
+			        	  frequencies[1]++;
+			          else if(frequency >= 5.0)
+			        	  frequencies[2]++;
+			          else if(frequency >= 0)
+			        	  frequencies[3]++;
+
+			          totalInstances++;
+		        }     
+		        System.out.println("FREQUENCIES: " + Arrays.toString(frequencies));
+		        priorProbabilities[0] = frequencies[0]/totalInstances;
+		        priorProbabilities[1] = frequencies[1]/totalInstances;
+		        priorProbabilities[2] = frequencies[2]/totalInstances;
+		        priorProbabilities[3] = frequencies[3]/totalInstances;
+		        System.out.println("PRIOR: " + Arrays.toString(priorProbabilities));
+		        
+		        // getting probability of attribute given the class
+		        
+		        double [][] pAttClass = new double [4][attributes.length];
+		        /*
+		        for(int j = 0; j < pAttClass.length; j++) {
+			        // finding the class
+			          if(classification >= 8.0)
+			        	  pAttClass[j] = attributeFrequencies[j] / frequencies[0];
+			          else if(classification >= 6.5)
+			        	  pAttClass[j] = attributeFrequencies[j] / frequencies[1];
+			          else if(classification >= 5.0)
+			        	  pAttClass[j] = attributeFrequencies[j] / frequencies[2];
+			          else if(classification >= 0)
+			        	  pAttClass[j] = attributeFrequencies[j] / frequencies[3];
+		        }
+		        */
+		        
+		        double [] multiples = new double[classes.length];
+		        for(int b = 0; b < classes.length; b++) {
+		        	for(int c = 0; c < attributes.length; c++) {
+			        	pAttClass[b][c] = attributeFrequencies[b][c] / frequencies[b];
+		        	}
+			        // multiplying the values of each attribute-given-class
+		        	
+		        }
+		        String chosenClass = ""; double max = 0;
+		        for (int b = 0; b < classes.length; b++) {
+		        	for(int c = 0; c < attributes.length; c++) {
+		        		if(c == 0) {
+		        			multiples[b] = pAttClass[b][c];
+		        		}
+		        		else {
+		        			multiples[b] = multiples[b] * pAttClass[b][c];
+		        		}
+		        	}
+		        	if(multiples[b] >= max)
+		        		max = multiples[b];
+		        }
+
+		        System.out.println("max: " + max);
+		          if(max >= 8.0)
+		        	  chosenClass = "great";
+		          else if(max >= 6.5)
+		        	  chosenClass = "good";
+		          else if(max >= 5.0)
+		        	  chosenClass = "mediocre";
+		          else if(max >= 0)
+		        	  chosenClass = "bad";
+		        System.out.println("MULTIPLES: " + Arrays.toString(multiples));
+		        System.out.println("CHOSEN CLASS: " + chosenClass);
+		        
+		        
+		        st.close();
+		      	conn.close();
+			}
+		    catch (Exception e)
+		    {
+		      e.printStackTrace();
+		    }
+		}
+		
 	}
 	
 	
@@ -825,8 +985,8 @@ class ReadFromFileTest {
 		//Genres g = new Genres();
 		//g.readGenresFromFile();
 		
-		ReleaseDates rd = new ReleaseDates();
-		rd.readReleaseDatesFromFile();
+		//ReleaseDates rd = new ReleaseDates();
+		//rd.readReleaseDatesFromFile();
 		
 		//RunningTimes rt = new RunningTimes();
 		//rt.readRunningTimesFromFile();
@@ -844,8 +1004,10 @@ class ReadFromFileTest {
 			Database db = new Database(conn);
 			
 			//System.out.println("NUM OF EXCEPTIONS: " + rt.numOfExceptions);
-			db.insertIntoDB(rd);
-			db.queryDB("releaseDates");
+			//db.insertIntoDB(rd);
+			//db.queryDB("releaseDates");
+			String [] atts = {"19", "2008"}; String [] attTypes = {"runningTime", "year"};
+			db.naiveBayes(atts, attTypes);
 	    }
 	    catch (Exception e)
 	    {
